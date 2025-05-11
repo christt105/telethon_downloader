@@ -1,23 +1,19 @@
-version: '3'
-
 services:
-
   telethon_downloader:
-    image: jsavargas/telethon_downloader
+    build: .
+    #image: jsavargas/telethon_downloader
     container_name: telethon_downloader
     restart: unless-stopped
     network_mode: host
+    env_file:
+      - .env
     environment:
-      - PUID=99
-      - PGID=100
+      - PUID=1000
+      - PGID=1000
       - PERMISSIONS_FOLDER=777
       - PERMISSIONS_FILE=755
-      - TG_AUTHORIZED_USER_ID=    #<telegram chat_id authorized>
-      - TG_API_ID=
-      - TG_API_HASH= 
-      - TG_BOT_TOKEN=
-      - TZ=America/Santiago
-      - APP_LANGUAGE=en_EN                              # OPTIONAL
+      - TZ=Europe/Madrid
+      - APP_LANGUAGE=es_ES                              # OPTIONAL
       - TG_UNZIP_TORRENTS=True                          # OPTIONAL (True/False)
       - ENABLED_UNZIP=True                              # OPTIONAL (True/False)
       - ENABLED_UNRAR=True                              # OPTIONAL (True/False)
@@ -34,7 +30,9 @@ services:
       - YOUTUBE_AUDIO_FOLDER=/youtube/audio             # OPTIONAL
       - YOUTUBE_VIDEO_FOLDER=/youtube/video             # OPTIONAL
     volumes:
-      - /path/to/config:/config
-      - /path/to/download:/download
-      - /path/to/download/torrent/watch:/watch
+      - ./config:/config
+      - ./download:/download
+      - ./Películas:/Películas
+      - ./Series:/Series
+      - ./torrent/watch:/watch
 

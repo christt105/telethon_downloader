@@ -17,3 +17,5 @@ test.py
 telethon-downloader/False/*
 .env
 docker_*.sh
+/config
+/Películas

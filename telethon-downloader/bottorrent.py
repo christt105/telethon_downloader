@@ -193,6 +193,10 @@ class TelegramBot:
                 logger.logger.info(f"handle_new_message => RENAME: {event}")
                 await self.renameFilesReply(event)
 
+            elif AUTHORIZED_USER and (event.message.message).startswith("/uncompress"):
+                logger.logger.info(f"handle_new_message => UNCOMPRESS: {event}")
+                await self.unCompressAll()
+
             elif (event.message.message).startswith("/"):
                 await self.commands(event.message)
 
@@ -815,11 +819,23 @@ class TelegramBot:
                 fileExtractor = FileExtractor()
                 await fileExtractor.extract_unzip(file_path, directorio_destino)
                 self.utils.change_owner_permissions(directorio_destino)
+            
+            else:
+                return
 
-            return
+            os.remove(file_path)
 
         except Exception as e:
             logger.logger.error(f"unCompress Exception : {file_path} [{e}]")
+
+    async def unCompressAll(self):
+        file_extractor = FileExtractor()
+
+        logger.logger.info(list(self.GROUP_PATH.values()))
+
+        #file_extractor.extract_7z()
+
+        
 
     async def youTubeDownloader(self, message, text):
         try:
