@@ -54,6 +54,8 @@ class TelegramBot:
         self.downloadFilesDB = DownloadFilesDB()
 
         self.SESSION = self.constants.get_variable("SESSION")
+        logger.logger.info(f"SESSION: {self.SESSION}")
+        return
         self.API_ID = self.constants.get_variable("API_ID")
         self.API_HASH = self.constants.get_variable("API_HASH")
         self.BOT_TOKEN = self.constants.get_variable("BOT_TOKEN")
@@ -867,30 +869,62 @@ class TelegramBot:
         directories.add(self.PATH_YOUTUBE)
         directories.add(self.PATH_LINKS)
         
-        uncompressed_files = []
+        def filter_parent_directories(directories):
+            sorted_dirs = sorted(directories, key=lambda x: x.count(os.sep))
+            filtered = []
+            for d in sorted_dirs:
+                if not any(d.startswith(parent + os.sep) for parent in filtered):
+                    filtered.append(d)
+            return set(filtered)
+
+        directories = set(os.path.abspath(d) for d in directories if d and d.strip())
+        directories = {d for d in directories if d not in ('/', '\\', '')}
+        directories = filter_parent_directories(directories)
+
+        logger.logger.info(f"Directories to process: {directories}")
              
+        uncompressed_files = []
+        processed_files = set()
+        
         for directory in directories:
-            if not directory or not os.path.exists(directory):
+            if not directory or not os.path.exists(directory) or directory in ('/', '\\'):
                 continue
 
             # Find all .zip.001 files (first part of split archives)
             zip_001_files = glob.glob(os.path.join(directory, '**', '*.zip.001'), recursive=True)
-
+            
             # Uncompress only the first part of split archives
             for zip_001_file in zip_001_files:
+                zip_001_file_abs = os.path.abspath(zip_001_file)
+                if zip_001_file_abs in processed_files:
+                    continue 
+                
+                processed_files.add(zip_001_file_abs)
+                
                 try:
                     logger.logger.info(f"unCompressAll zip_001_file: {zip_001_file}")
-                    command = f'7z x "{zip_001_file}"'
+                    command = f'7z x "{zip_001_file}" -o"{directory}"'
                     process = await asyncio.create_subprocess_shell(
                         command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
                     )
                     await process.communicate()
-                    logger.logger.info(f"unCompressAll finished: {zip_001_file}")
+                    logger.logger.info(f"unCompressAll finished: {zip_001_file} in {directory}")
                     uncompressed_files.append(zip_001_file)
+
+                    # Remove all parts of the split archive
+                    # base_name = zip_001_file[:-4]  # Remove '.001'
+                    # part_pattern = base_name + '.*'
+                    # part_files = glob.glob(part_pattern)
+                    # for part_file in part_files:
+                    #     try:
+                    #         os.remove(part_file)
+                    #         logger.logger.info(f"Removed split archive part: {part_file}")
+                    #     except Exception as e:
+                    #         logger.logger.error(f"Failed to remove part: {part_file} [{e}]")
                 except Exception as e:
                     logger.logger.error(f"unCompressAll Exception: {zip_001_file} [{e}]")
         
-        await message.reply(f"Uncompressed files: {', '.join(uncompressed_files)}")
+        await message.reply(f"Uncompressed files:\n- {'\n\n- '.join(uncompressed_files)}")
 
         
 
