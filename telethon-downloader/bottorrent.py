@@ -24,6 +24,7 @@ import requests
 from pathlib import Path
 from urllib.parse import urlparse
 from datetime import timedelta
+import glob
 
 import logger
 import config_manager
@@ -195,7 +196,7 @@ class TelegramBot:
 
             elif AUTHORIZED_USER and (event.message.message).startswith("/uncompress"):
                 logger.logger.info(f"handle_new_message => UNCOMPRESS: {event}")
-                await self.unCompressAll()
+                await self.unCompressAll(event.message)
 
             elif (event.message.message).startswith("/"):
                 await self.commands(event.message)
@@ -828,12 +829,68 @@ class TelegramBot:
         except Exception as e:
             logger.logger.error(f"unCompress Exception : {file_path} [{e}]")
 
-    async def unCompressAll(self):
-        file_extractor = FileExtractor()
+    async def unCompressAll(self, message):
+        # Gather all directories from config sections
+        directories = set()
 
-        logger.logger.info(list(self.GROUP_PATH.values()))
+        # Add default path directories
+        default_paths = self.getConfigurationManager("DEFAULT_PATH")
+        for ext in default_paths:
+            try:
+                path = self.CONFIG_MANAGER.get_value("DEFAULT_PATH", ext)
+                directories.add(path)
+            except Exception:
+                continue
 
-        #file_extractor.extract_7z()
+        # Add group path directories
+        group_paths = self.getConfigurationManager("GROUP_PATH")
+        for group_id in group_paths:
+            try:
+                path = self.CONFIG_MANAGER.get_value("GROUP_PATH", group_id)
+                directories.add(path)
+            except Exception:
+                continue
+
+        # Add regex path directories
+        regex_paths = self.getConfigurationManager("REGEX_PATH")
+        for regex in regex_paths:
+            try:
+                path = self.CONFIG_MANAGER.get_value("REGEX_PATH", regex)
+                directories.add(path)
+            except Exception:
+                continue
+
+        # Add other relevant paths
+        directories.add(self.PATH_COMPLETED)
+        directories.add(self.TG_DOWNLOAD_PATH)
+        directories.add(self.PATH_TMP)
+        directories.add(self.PATH_YOUTUBE)
+        directories.add(self.PATH_LINKS)
+        
+        uncompressed_files = []
+             
+        for directory in directories:
+            if not directory or not os.path.exists(directory):
+                continue
+
+            # Find all .zip.001 files (first part of split archives)
+            zip_001_files = glob.glob(os.path.join(directory, '**', '*.zip.001'), recursive=True)
+
+            # Uncompress only the first part of split archives
+            for zip_001_file in zip_001_files:
+                try:
+                    logger.logger.info(f"unCompressAll zip_001_file: {zip_001_file}")
+                    command = f'7z x "{zip_001_file}"'
+                    process = await asyncio.create_subprocess_shell(
+                        command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    )
+                    await process.communicate()
+                    logger.logger.info(f"unCompressAll finished: {zip_001_file}")
+                    uncompressed_files.append(zip_001_file)
+                except Exception as e:
+                    logger.logger.error(f"unCompressAll Exception: {zip_001_file} [{e}]")
+        
+        await message.reply(f"Uncompressed files: {', '.join(uncompressed_files)}")
 
         
 

@@ -7,6 +7,7 @@ COPY requirements.txt requirements.txt
 RUN apt-get update && apt-get -qy dist-upgrade && \
     apt-get install -qy --no-install-recommends \
     ffmpeg \
+    p7zip-full \
     unzip && \
     rm -rf /var/lib/apt/lists/*
 
